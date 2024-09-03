@@ -8,7 +8,22 @@ Description of this project
 ## Download this repository
 
 ```bash
-git clone https://github.com/juliettemaes/Replica_exchange_MonteCarlo_Algorithm.git
-cd 
+git clone https://github.com/juliettemaes/REMC-HP.git
+cd REMC-HP
+```
+## Install Conda environment
+
+Install [conda](https://docs.conda.io/en/latest/miniconda.html).
+
+Create conda environment and install dependendies:
+
+```bash
+cd REMC-HP
+mamba env create -f environment.yml
 ```
 
+Load conda environment:
+
+```bash
+conda activate protein-folding
+```

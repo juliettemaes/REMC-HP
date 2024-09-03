@@ -1,0 +1,7 @@
+name: protein-folding
+channels:
+    - conda-forge
+    - bioconda
+    - nodefaults
+dependencies:
+    - python
