@@ -3,7 +3,7 @@
 Juliette Maes
 Sept. 2024
 
-Description of this project
+Description of this project. Put the link of the oroginal paper, from which the work is inspired. 
 
 ## Download this repository
 
@@ -19,7 +19,7 @@ Create conda environment and install dependendies:
 
 ```bash
 cd REMC-HP
-mamba env create -f environment.yml
+conda env create -f environment.yml
 ```
 
 Load conda environment:

@@ -1,0 +1,6 @@
+# Required python libraries 
+copy
+matplotlib
+networkx
+numpy=2.1.1
+random
