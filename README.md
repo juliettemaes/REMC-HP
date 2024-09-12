@@ -3,7 +3,7 @@
 Juliette Maes
 Sept. 2024
 
-Description of this project. Put the link of the oroginal paper, from which the work is inspired. 
+Find the original article, from which this work is inspired, [here](https://doi.org/10.1186/1471-2105-8-342).
 
 ## Download this repository
 
@@ -58,8 +58,8 @@ pip install -r requirement.txt
 
 ## Running the repo
 
-First to run the REMC Search you have to run the main.py file found in the src folder.
-That file takes two arguments, optimal_energy and hpsequence OR aasequence.
+To run the REMC Search on your sequence, run the main.py file found in the src folder.
+This script takes two arguments, optimal_energy and hpsequence OR aasequence.
 
 Here is an example of a command line to run the project:  
 
@@ -67,8 +67,8 @@ Here is an example of a command line to run the project:
 python src/run.py --hpsequence="HPHPPHHPHPPHPHHPPHPH" --optimal_energy=-9
 ```
 
-The way I designed the arguments, as I said before, makes the following line not valid : 
+Here is an example of a INVALID command line :
 ```bash
-python src/run.py --hpsequence="HPHPPHHPHPPHPHHPPHPH" --aasequence="HPHPPHHPHPPHPHHPPHPH" --optimal_energy=-9
+python src/run.py --hpsequence="HPHPPHHPHPPHPHHPPHPH" --aasequence="AMGHICVFGEDGLKILDGEA" --optimal_energy=-9
 ```
 
