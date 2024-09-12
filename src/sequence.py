@@ -3,17 +3,23 @@ from variables import AA_DICT
 
 # Classes
 class Sequence():
-    def __init__(self, sequence : str):
+    def __init__(self, sequence = None, hp_sequence = None):
         if len(sequence) > 50:
             raise ValueError("Sequence is too long, should be less than 50 amino acids")
-        for aa in sequence:
-            if aa not in AA_DICT:
-                raise ValueError(f"Invalid amino acid: {aa}")
-            else:
-                self.sequence = sequence
-                self.length = len(sequence)
-                self.hp_sequence = self.HP_convert()
-                self.aa_coord = self.aa_coord_generator()
+        if sequence is not None:
+            for aa in sequence:
+                if aa not in AA_DICT:
+                    raise ValueError(f"Invalid amino acid: {aa}")
+                else:
+                    self.sequence = sequence
+                    self.length = len(sequence)
+                    self.hp_sequence = self.HP_convert()
+                    self.aa_coord = self.aa_coord_generator()
+        elif hp_sequence is not None:
+            self.hp_sequence = hp_sequence
+            self.sequence = hp_sequence
+            self.length = len(hp_sequence)
+            self.aa_coord = self.aa_coord_generator()
 
     def __str__(self):
         return self.sequence

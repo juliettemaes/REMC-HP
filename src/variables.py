@@ -25,6 +25,9 @@ AA_DICT = {
     'V': 'H',  # Valine (Hydrophobic)
 }
 
+# Sequence examples
+seq_ex1 = "GRAIDGLGIVKPGYPGVWKPGVW" # would translate to (HP)2PH2PHP2HPH2P2HPH
+SI_I = "HPHPPHHPHPPHPHHPPHPH"
 
 # Lattice variables
 GRID_SIZE_FACTOR = 2

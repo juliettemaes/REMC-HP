@@ -61,7 +61,7 @@ class Lattice():
                 continue
 
 
-    def calculate_energy(self): ### add the check as separate functions
+    def calculate_energy_deprecated(self): ### add the check as separate functions
         # calculate the energy of the conformation
         energy = 0
         for i in range(self.size - 1):
@@ -87,8 +87,23 @@ class Lattice():
                 if abs(self.lattice[i,j] - self.lattice[i, j+1]) != 1:
                     if self.sequence.hp_sequence[self.lattice[i,j]-1] == "H" and self.sequence.hp_sequence[self.lattice[i,j+1]-1] == "H":
                         energy -= 1
-        self.energy = energy
+        return energy
 
+    def calculate_energy(self):
+        energy = 0
+        n = self.sequence.length
+        for j in range(n-1):
+            if self._is_hydrophobic(self.sequence.aa_coord[j]):
+                for k in range(j+1, n):
+                    if self._is_hydrophobic(self.sequence.aa_coord[k]):
+                        if self._are_topological_neighbors(self.sequence.aa_coord[j], self.sequence.aa_coord[k]):
+                            if self._are_not_connected_neighbors(self.sequence.aa_coord[j], self.sequence.aa_coord[k]):
+                                energy -= 1
+        return energy
+
+    def _is_hydrophobic(self, res):
+        # check if two amino acids are hydrophobic
+        return res['type'] == 'H'
         
 
     def _find_empty_neighbors(self, i, j):
@@ -115,7 +130,6 @@ class Lattice():
 
         x, y = self.sequence.aa_coord[chain_index - 1]["x"], self.sequence.aa_coord[chain_index - 1]["y"]
         possible_pos = self._find_empty_neighbors(self.sequence.aa_coord[res_ref - 1]["x"], self.sequence.aa_coord[res_ref - 1]["y"])
-        # print(possible_pos)
 
         if len(possible_pos) != 0: # if there are possible new position(s)
             new_pos = rd.choice(possible_pos)
@@ -132,16 +146,12 @@ class Lattice():
             res_iplus1 = self.sequence.aa_coord[chain_index]
             
             if self._are_corner(res_iminus1, res_iplus1):  # check if 3 connected neighbors are corner
-                # print(f"residue {chain_index} is a corner")
                 x_new, y_new = self._find_potential_corner(chain_index)
-                # print(f"{x_new}, {y_new} is a potential corner available for residue {chain_index}")
 
                 if self._check_occupancy(x_new, y_new):
-                    # print(f"position ({x_new}, {y_new}) is free")
                     self.lattice[x_new, y_new] = chain_index
                     self.lattice[res_i["x"], res_i["y"]] = 0
                     self.sequence.aa_coord_update(chain_index - 1, x_new, y_new) # update the coordinates of the amino acid in the sequence object
-                    # print(f"Corner move for amino acid {chain_index} at position ({res_i['x']}, {res_i['y']}) to position ({x_new}, {y_new})")
         else:
             raise ValueError("No Corner move possible. The amino acid is at the end of the chain")
 
@@ -182,7 +192,6 @@ class Lattice():
 
             # check if 4 connected neighbors for a U
             if self._are_U(res_iminus1, res_i, res_iplus1, res_next2) and chain_index < self.sequence.length - 1:
-                # print(f"residue {chain_index} is a U")
                 x_new1, y_new1, x_new2, y_new2 = self._find_potential_U(res_iminus1, res_i, res_iplus1, res_next2)
                 if self._check_occupancy(x_new1, y_new1) and self._check_occupancy(x_new2, y_new2):
                     # move the amino acids to the new positions
@@ -194,7 +203,6 @@ class Lattice():
                     # update the coordinates of the amino acid in the sequence object
                     self.sequence.aa_coord_update(chain_index - 1, x_new1, y_new1)
                     self.sequence.aa_coord_update(chain_index, x_new2, y_new2)
-                    # print(f"CKS move for amino acid {chain_index} at position ({res_i['x']}, {res_i['y']}) to position ({x_new1}, {y_new1})")
 
             elif chain_index !=2 : # check for alternative U position
                 res_prev2 = self.sequence.aa_coord[chain_index - 3]
@@ -203,7 +211,6 @@ class Lattice():
                 res_iplus1 = self.sequence.aa_coord[chain_index]
 
                 if self._are_U(res_prev2, res_iminus1, res_i, res_iplus1):
-                    # print(f"residue {chain_index} is a U")
                     x_new1, y_new1, x_new2, y_new2 = self._find_potential_U(res_prev2, res_iminus1, res_i, res_iplus1)
                     if self._check_occupancy(x_new1, y_new1) and self._check_occupancy(x_new2, y_new2):
                         # move the amino acids to the new positions
@@ -215,7 +222,6 @@ class Lattice():
                         # update the coordinates of the amino acid in the sequence object
                         self.sequence.aa_coord_update(chain_index - 2, x_new1, y_new1)
                         self.sequence.aa_coord_update(chain_index - 1, x_new2, y_new2)
-                        # print(f"CKS move for amino acid {chain_index} at position ({res_i['x']}, {res_i['y']}) to position ({x_new2}, {y_new2})")
 
 
 
@@ -245,15 +251,6 @@ class Lattice():
 
 
     def pull_move(self, chain_index):
-        # print("-------------------------")
-        # print("STARTING A NEW PULL MOVE")
-        # print("-------------------------")
-        # print("INFORMATIONS - CURRENT CHAIN_INDEX : ", chain_index, "CURRENT RESIDU : ", self.sequence.aa_coord[chain_index - 1])
-        # print("-------------------------")
-        # print("INFORMATIONS - I = ", chain_index, "I+1 : ", chain_index+1)
-        # print("-------------------------")
-        # print("INFORMATIONS - CURRENT LATTICE BEFORE MOVE : ", self.lattice)
-
         res_i = self.sequence.aa_coord[chain_index - 1] # equals to CHAIN INDEX
         res_iplus1 = self.sequence.aa_coord[chain_index]
         res_iminus1 = self.sequence.aa_coord[chain_index - 2] # equals to CHAIN INDEX -1
@@ -261,24 +258,17 @@ class Lattice():
         pos_L,found_L = self._find_L_positions(res_i, res_iplus1)
         if found_L:
             pos_C, status_C, found_C = self._find_C_positions(pos_L, res_i, res_iminus1)
-            if found_C is False:
-                print("No possible move as no C res_i available.")
-            else:
+            if found_C is True:
                 if status_C == "C is res_iminus1":
                     # perform corner move
                     self.corner_move(chain_index)
-                    # print("SUCCESSFULL CORNER MOVE FOR RESIDUE", chain_index)
                 elif status_C == "empty":
                     # perform pull move
                     # save positions of i and i-1
                     empty_pos = [(res_i["x"], res_i["y"]), (res_iminus1["x"], res_iminus1["y"])]
-                    # print("POSITIONS TO BE EMPTIED : ", empty_pos)
                     # move i and i+1 to L and C and free the prevous positions
                     self._move(res_i, pos_L)
                     self._move(res_iminus1, pos_C)
-
-                    # print("new position for", chain_index, "is", pos_L)
-                    # print("coordinates of", chain_index, "are", self.sequence.aa_coord[chain_index - 1])
 
                     self._free_position(res_i)
                     self._free_position(res_iminus1)
@@ -286,40 +276,23 @@ class Lattice():
                     self.sequence.aa_coord_update(chain_index - 1, pos_L[0], pos_L[1])
                     self.sequence.aa_coord_update(chain_index - 2, pos_C[0], pos_C[1])
 
-                   #  print("SUCCESSFULL PULL MOVE FOR RESIDUE FOR", res_i["chain_index"], "AND", res_iminus1["chain_index"])
-                   #  print(self.lattice)
-                   # print("Current index", res_i["chain_index"])
-
                     if res_i["chain_index"] >= 3:
-                        # print("Iterating")
-                        # pull the chain
-                        
                         loop_index = chain_index -1 #init index to i-1
 
                         while loop_index >= 2 :
-                            # print("loop index", loop_index)
                             res_loop_iminus_1 = self.sequence.aa_coord[loop_index-1] # get res i-1
                             res_loop_iminus_2= self.sequence.aa_coord[loop_index-2] # get res i-2
-                            # print("loop minus1", res_loop_iminus_1)
-                            # print("loop minus2", res_loop_iminus_2)
                             is_neighbor = self._are_topological_neighbors(res_loop_iminus_1, res_loop_iminus_2)
-                            # print("is neighbor", is_neighbor)
                             if is_neighbor is False:
-                                # print("MOVING I MINUS 2")
                                 temp_pos = (res_loop_iminus_2["x"], res_loop_iminus_2["y"])
                                 self._free_position(res_loop_iminus_2)
                                 new_position = empty_pos.pop(0)
-                                # print("position to take : ",new_position)
                                 self._move(self.sequence.aa_coord[loop_index-2], new_position)
                                 self.sequence.aa_coord_update(loop_index-2, new_position[0], new_position[1])
                                 empty_pos.append(temp_pos)
                             if is_neighbor is True:
-                                # print("LOOP BREAK")
                                 break
                             loop_index -= 1
-
-        else:
-            print("No possible move as no L res_i available.")
 
     
     def _move(self, res_to_be_moved, place_to_move):
@@ -349,8 +322,6 @@ class Lattice():
         neighbors_pos = self._find_empty_neighbors(res_i1["x"], res_i1["y"])
         intersection = list(set(diag_pos) & set(neighbors_pos))
         if len(intersection) > 0:
-            # print(f"{res_i["chain_index"]} ({res_i["x"]}, {res_i["y"]} and {res_i1["chain_index"]} have a L position at {intersection}")
-            # print(f"we keep {intersection[0]}")
             return intersection[0], True #on garde le premier pour l'instant
         else:
             
@@ -359,17 +330,12 @@ class Lattice():
     def _find_C_positions(self, L, res_i, res_iminus1):
         neighbors_pos_L = self._find_empty_neighbors(L[0], L[1])
         neighbors_pos_i = self._find_empty_neighbors(res_i["x"], res_i["y"])
-        # print(f'neighbors_pos_L: {neighbors_pos_L}')
-        # print(f'neighbors_pos_i: {neighbors_pos_i}')
         possible_pos = list(set(neighbors_pos_L) & set(neighbors_pos_i)) # find the common empty neighbors
         if len(possible_pos) > 0:
-            # print(f"{res_i["chain_index"]} and {res_iminus1["chain_index"]} have a C empty position at {possible_pos}")
             return possible_pos[0], "empty", True # C is empty
         elif self._are_topological_neighbors({"x":L[0],"y":L[1]}, res_iminus1): # check if C is occupied by res_iminus1
-            # print(f"there is res_iminus1 at C position {res_iminus1["chain_index"]} at coordinates {res_iminus1["x"], res_iminus1["y"]}")
             return [(res_iminus1["x"], res_iminus1["y"])], "C is res_iminus1", True
         else:
-            # print(f"no possible C position for {res_i["chain_index"]}")
             return (None, None), "C is occupied", False
 
     def _translate_chain(self, x, y):
@@ -383,15 +349,11 @@ class Lattice():
 
     def _need_translation_x(self):
         list_x = [temp_dict["x"] for temp_dict in self.sequence.aa_coord]
-        print(list_x)
         max_x = max(list_x)
         min_x = min(list_x)
-        print(max_x)
-        print(min_x)
         center = self.size // 2
         middle = (min_x + max_x) // 2
         dx = center - middle
-        print("max_x >", self.size - 2 , "or min_x < 1:", max_x > self.size - 2 or min_x < 1)
         if max_x >= self.size - 2 or min_x < 1:
             return True, dx
         else:
@@ -399,15 +361,11 @@ class Lattice():
 
     def _need_translation_y(self):
         list_y = [temp_dict["y"] for temp_dict in self.sequence.aa_coord]
-        print(list_y)
         max_y = max(list_y)
         min_y = min(list_y)
-        print(max_y)
-        print(min_y)
         center = self.size // 2
         middle = (min_y + max_y) // 2
         dy = center - middle
-        print("max_y > ", self.size - 2 ,"or min_y < 1:", max_y > self.size - 2 or min_y < 1)
         if max_y >= self.size - 2 or min_y < 1:
             return True, dy
         else:
@@ -509,20 +467,14 @@ class Lattice():
         # check if two amino acids are connected neighbors
         return abs(res1['index'] - res2['index']) > 1
 
+
+    
+
     def _are_hydrophobic(self, res1, res2):
         # check if two amino acids are hydrophobic
         return res1['type'] == 'H' and res2['type'] == 'H'
 
-    def calculate_energy2(self):
-        energy = 0
-        n = self.sequence.length
-        for j in range(n-1):
-            for k in range(j+1, n):
-                if self._are_hydrophobic(self.sequence.aa_coord[j], self.sequence.aa_coord[k]):
-                    if self._are_topological_neighbors(self.sequence.aa_coord[j], self.sequence.aa_coord[k]):
-                        if self._are_not_connected_neighbors(self.sequence.aa_coord[j], self.sequence.aa_coord[k]):
-                            energy -= 1
-        return energy
+    
 
 
     # # back up
