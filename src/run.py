@@ -28,27 +28,9 @@ def exchange_replicates(replicate1, replicate2):
         # update the trajectory
         replicate1.trajectory.append(deepcopy(replicate1.lattice))
         replicate2.trajectory.append(deepcopy(replicate2.lattice))
-        # print("exchange accepted")
-        # # update the coordinates
-        # for i in range(replicate1.lattice.sequence.length):
-        #     print(np.where(replicate1.lattice.lattice == i+1))
-        #     replicate1.lattice.sequence.aa_coord_update(
-        #         i, 
-        #         int(np.where(replicate1.lattice.lattice == i+1)[0][0]),
-        #         int(np.where(replicate1.lattice.lattice == i+1)[1][0])
-        #         )
-        #     print("i", i)
-        #     print(np.where(replicate2.lattice.lattice == i+1))
-        #     replicate2.lattice.sequence.aa_coord_update(
-        #         i, 
-        #         int(np.where(replicate2.lattice.lattice == i+1)[0][0]),
-        #         int(np.where(replicate2.lattice.lattice == i+1)[1][0])
-        #         )
-        # # update the energy
-        # print("previous energy lattice i", energy1, "previous energy lattice j", energy2)
-        # replicate1.lattice.energy = replicate1.lattice.calculate_energy()
-        # replicate2.lattice.energy = replicate2.lattice.calculate_energy()
-        # print("new energy lattice i", replicate1.lattice.energy, "new energy lattice j", replicate2.lattice.energy)
+        return True
+    else:
+        return False
 
 
 def compute_delta(energy_i, energy_j, temp_i, temp_j):
@@ -74,25 +56,23 @@ def REMC_search(sequence, Tmin, Tmax, nb_replica, energy_optimal, max_iteration 
     replicates = []
     for temperature in temperatures:
         lattice =  lat.Lattice(sequence = sequence)
-        mc_search = mc.mc_search(lattice = lattice, temperature = temperature, probability = probability, max_iteration = max_iteration)
+        mc_search = mc.mc_search(lattice = lattice, temperature = temperature, probability = probability, max_iteration = max_iteration, target_energy = energy_optimal)
         replicates.append(mc_search)
-    # print(replicates)
-    # print(energy_best, "energy best")
-    # print(energy_optimal, "energy optimal")
-    # print(energy_best < energy_optimal)
     # run the replica exchange
-    # print("STARTING REPLICA EXCHANGE")
     while energy_best > energy_optimal:
         for replica in range(nb_replica):
             replicates[replica].run()
             if replicates[replica].lattice.energy < energy_best:
                 energy_best = replicates[replica].lattice.energy
+            print("replica", replica, "energy", replicates[replica].lattice.energy)
+            print("energy best", energy_best, "target energy", energy_optimal)
             
         i = offset + 1
         while i + 1 <= nb_replica:
             j = i + 1
-            # print("tentative exchange between", i, "and", j)
-            exchange_replicates(replicates[i-1], replicates[j-1])
+            test = exchange_replicates(replicates[i-1], replicates[j-1])
+            if test:
+                print("exchange between", i-1, "and", j-1, "successful")
             i += 2
         offset = 1 - offset
     # return the conformation associated with the best energy
@@ -112,14 +92,14 @@ def REMC_search(sequence, Tmin, Tmax, nb_replica, energy_optimal, max_iteration 
 # Main program
 if __name__ == "__main__":
 
-    sequence1 = seq.Sequence(SI_I)
+    sequence1 = seq.Sequence(hp_sequence = SI_1)
     print(sequence1.hp_sequence)
-    print(REMC_search(sequence1, 160, 220, 10, energy_optimal = -5, max_iteration = 10000, probability = 0.5))
+    print(REMC_search(sequence1, 160, 220, 10, energy_optimal = -9, max_iteration = 20000, probability = 0.5))
     print(sequence1.hp_sequence)
     # print(lat.sequence.hp_sequence)
     # lat = lat.Lattice(sequence = sequence1)
     # energy_initial = lat.calculate_energy()
-    # mc_search = mc.mc_search(lattice = lat, temperature = 160, probability = 0.5, max_iteration = 10000)
+    # #mc_search = mc.mc_search(lattice = lat, temperature = 160, probability = 0.5, max_iteration = 100000, target_energy = -9)
     # mc_search.run()
     # print("INITIAL ENERGY", energy_initial)
     # print("ENERGY LAST LATTICE", lat.energy)

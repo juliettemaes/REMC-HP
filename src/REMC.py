@@ -1,4 +1,0 @@
-# Libraries
-
-
-class REMCsearch(Lattice):

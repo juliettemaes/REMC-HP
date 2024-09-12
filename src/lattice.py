@@ -2,6 +2,11 @@ from copy import deepcopy
 import numpy as np
 import random as rd
 from variables import GRID_SIZE_FACTOR
+from moves.move_utils import *
+from moves.end_move_utils import *
+from moves.corner_move_utils import *
+from moves.cks_utils import *
+from moves.pull_move_utils import *
 import sequence as seq
 
 # Classes:
@@ -11,11 +16,9 @@ class Lattice():
         self.size = self.sequence.length * GRID_SIZE_FACTOR # size of the lattice
         self.lattice = np.zeros((self.size, self.size), dtype = int) # creation of an empty lattice
         self._initialize_random() # initialize the lattice with a random conformation
-        # self.lattice_hp = None # lattice with the HP sequence
         self.lattice_initial = deepcopy(self.lattice) # save the initial lattice as an attribute
         self.energy = None # energy of the system
 
-        # add conditions to say that it is rejected if the sequence is not valid (HP model)
 
     def __str__(self):
         return str(self.lattice)
@@ -36,7 +39,7 @@ class Lattice():
                 self.sequence.aa_coord_update(0, i, j)  # Update the coordinates of the amino acid in the sequence object
 
                 for aa_index in range(1, self.sequence.length):
-                    possible_pos = self._find_empty_neighbors(i, j)
+                    possible_pos = find_empty_neighbors(self, i, j)
 
                     # If no possible positions are available, raise an exception to restart the initialization
                     if len(possible_pos) == 0:
@@ -61,444 +64,99 @@ class Lattice():
                 continue
 
 
-    def calculate_energy_deprecated(self): ### add the check as separate functions
-        # calculate the energy of the conformation
-        energy = 0
-        for i in range(self.size - 1):
-            for j in range(self.size - 1):
-                if (self.lattice[i,j] != 0) and (self.lattice[i, j+1] != 0): # checks if the amino acid is present
-                    if (abs(self.lattice[i,j] - self.lattice[i, j+1]) != 1): # checks if the amino acids are connected neighbors
-                        if self.sequence.hp_sequence[self.lattice[i,j]-1] == "H" and self.sequence.hp_sequence[self.lattice[i,j+1]-1] == "H": # checks if the amino acids are hydrophobic
-                            energy -= 1
-                if (self.lattice[i,j] != 0) and (self.lattice[i+1, j] != 0):
-                    if abs(self.lattice[i,j] - self.lattice[i+1, j]) != 1:
-                        if self.sequence.hp_sequence[self.lattice[i,j]-1] == "H" and self.sequence.hp_sequence[self.lattice[i+1,j]-1] == "H":
-                            energy -= 1
-        # handle the bottom and right edges of the lattice
-        j = self.size - 1
-        for i in range(self.size - 1):
-            if self.lattice[i,j] != 0 and self.lattice[i+1, j] != 0:
-                if abs(self.lattice[i,j] - self.lattice[i+1, j]) != 1:
-                    if self.sequence.hp_sequence[self.lattice[i,j]-1] == "H" and self.sequence.hp_sequence[self.lattice[i+1,j]-1] == "H":
-                        energy -= 1
-        i = self.size - 1
-        for j in range(self.size - 1):
-            if self.lattice[i,j] != 0 and self.lattice[i, j+1] != 0:
-                if abs(self.lattice[i,j] - self.lattice[i, j+1]) != 1:
-                    if self.sequence.hp_sequence[self.lattice[i,j]-1] == "H" and self.sequence.hp_sequence[self.lattice[i,j+1]-1] == "H":
-                        energy -= 1
-        return energy
-
     def calculate_energy(self):
         energy = 0
         n = self.sequence.length
         for j in range(n-1):
-            if self._is_hydrophobic(self.sequence.aa_coord[j]):
+            if is_hydrophobic(self.sequence.aa_coord[j]):
                 for k in range(j+1, n):
-                    if self._is_hydrophobic(self.sequence.aa_coord[k]):
-                        if self._are_topological_neighbors(self.sequence.aa_coord[j], self.sequence.aa_coord[k]):
-                            if self._are_not_connected_neighbors(self.sequence.aa_coord[j], self.sequence.aa_coord[k]):
+                    if is_hydrophobic(self.sequence.aa_coord[k]):
+                        if are_topological_neighbors(self.sequence.aa_coord[j], self.sequence.aa_coord[k]):
+                            if are_not_connected_neighbors(self.sequence.aa_coord[j], self.sequence.aa_coord[k]):
                                 energy -= 1
         return energy
 
-    def _is_hydrophobic(self, res):
-        # check if two amino acids are hydrophobic
-        return res['type'] == 'H'
-        
-
-    def _find_empty_neighbors(self, i, j):
-        # find the possible positions for the next amino acid
-        possible_pos = []
-        if self.lattice[i-1,j] == 0:
-            possible_pos.append((i-1, j))
-        if self.lattice[i+1,j] == 0:
-            possible_pos.append((i+1, j))
-        if self.lattice[i,j-1] == 0:
-            possible_pos.append((i, j-1))
-        if self.lattice[i,j+1] == 0:
-            possible_pos.append((i, j+1))
-        return possible_pos
-
-
+    
     def end_move(self, chain_index):
-        if chain_index == 1: # the amino acid is at the beginning of the chain
-            res_ref = 2
-        elif chain_index == self.sequence.length: # the amino acid is at the end of the chain
-            res_ref = self.sequence.length - 1
-        else:
-            raise ValueError("Impossible move. The amino acid is not at the end of the chain")
+        #Check if the move is possible znd return the reference position
+        res_ref = is_end_move_possible(self, chain_index)
 
+        # Find the possible positions
         x, y = self.sequence.aa_coord[chain_index - 1]["x"], self.sequence.aa_coord[chain_index - 1]["y"]
-        possible_pos = self._find_empty_neighbors(self.sequence.aa_coord[res_ref - 1]["x"], self.sequence.aa_coord[res_ref - 1]["y"])
+        possible_pos = find_empty_neighbors(self, self.sequence.aa_coord[res_ref - 1]["x"], self.sequence.aa_coord[res_ref - 1]["y"])
 
+        # Swap if possible
         if len(possible_pos) != 0: # if there are possible new position(s)
-            new_pos = rd.choice(possible_pos)
-            x_new, y_new = new_pos[0], new_pos[1]
-            self.lattice[x, y] = 0
-            self.lattice[x_new, y_new] = chain_index
-            self.sequence.aa_coord_update(chain_index - 1, x_new, y_new) # update the coordinates of the amino acid in the sequence object
+            execute_end_move(self, possible_pos, chain_index, x, y)
             
 
     def corner_move(self, chain_index):
+        # Check if we are not dealing with the first or last amino acid that can't be corner moved.
         if chain_index not in (1, self.sequence.length):
-            res_i = self.sequence.aa_coord[chain_index - 1]
-            res_iminus1 = self.sequence.aa_coord[chain_index - 2]
-            res_iplus1 = self.sequence.aa_coord[chain_index]
             
-            if self._are_corner(res_iminus1, res_iplus1):  # check if 3 connected neighbors are corner
-                x_new, y_new = self._find_potential_corner(chain_index)
+            # Get the amino acids & check if they are corner
+            res_i, res_iminus1, res_iplus1 = get_corner_aa_to_check(self, chain_index)
+            is_corner = are_corner(res_iminus1, res_iplus1)
+            
+            if is_corner:  # If it is a corner, find the potential corner position
+                x_new, y_new = find_potential_corner(self, chain_index)
 
-                if self._check_occupancy(x_new, y_new):
-                    self.lattice[x_new, y_new] = chain_index
-                    self.lattice[res_i["x"], res_i["y"]] = 0
-                    self.sequence.aa_coord_update(chain_index - 1, x_new, y_new) # update the coordinates of the amino acid in the sequence object
+                if check_occupancy(self, x_new, y_new): # If the corner is free, execute the move
+                    execute_corner_move(self, chain_index, res_i, x_new, y_new)
         else:
             raise ValueError("No Corner move possible. The amino acid is at the end of the chain")
 
-
-    def _are_adjacent(self, res1, res2):
-        return abs(res1['x'] - res2['x']) + abs(res1['y'] - res2['y']) == 1
-
-
-    def _are_corner(self, res1, res2):
-        return ((abs(res1['x'] - res2['x']) + abs(res1['y'] - res2['y']) == 2) and (res1['x'] != res2['x']) and (res1['y'] != res2['y']))
-
-    def _check_occupancy(self, i, j):
-        # returns boolean, check if the positions are free by an amino acids
-        return (self.lattice[i,j] == 0)
-
-    def _find_potential_corner(self, chain_index):
-        if self.sequence.aa_coord[chain_index - 1]["x"] == self.sequence.aa_coord[chain_index - 2]["x"]:
-            y_new = self.sequence.aa_coord[chain_index - 2]["y"]
-            x_new = self.sequence.aa_coord[chain_index ]["x"]
-        else:
-            x_new = self.sequence.aa_coord[chain_index - 2]["x"]
-            y_new = self.sequence.aa_coord[chain_index]["y"]
-        return x_new, y_new
     
-    #### TO IMPROVE ####
     def cks_move(self, chain_index):
-        if chain_index not in (1, self.sequence.length): # can't perform the move if the amino acid is at the end of the chain
-            if chain_index < self.sequence.length - 1:
-                res_i = self.sequence.aa_coord[chain_index - 1]
-                res_iminus1 = self.sequence.aa_coord[chain_index - 2]
-                res_iplus1 = self.sequence.aa_coord[chain_index]
-                res_next2 = self.sequence.aa_coord[chain_index + 1]
-            elif chain_index == self.sequence.length - 1:
-                res_i = self.sequence.aa_coord[chain_index - 2]
-                res_iminus1 = self.sequence.aa_coord[chain_index - 3]
-                res_iplus1 = self.sequence.aa_coord[chain_index - 1]
-                res_next2 = self.sequence.aa_coord[chain_index]
+        # can't perform the move if the amino acid is at the end of the chain
+        if chain_index not in (1, self.sequence.length): 
 
-            # check if 4 connected neighbors for a U
-            if self._are_U(res_iminus1, res_i, res_iplus1, res_next2) and chain_index < self.sequence.length - 1:
-                x_new1, y_new1, x_new2, y_new2 = self._find_potential_U(res_iminus1, res_i, res_iplus1, res_next2)
-                if self._check_occupancy(x_new1, y_new1) and self._check_occupancy(x_new2, y_new2):
-                    # move the amino acids to the new positions
-                    self.lattice[x_new1, y_new1] = chain_index
-                    self.lattice[x_new2, y_new2] = chain_index + 1
-                    # free the positions of the amino acids
-                    self.lattice[res_i["x"], res_i["y"]] = 0
-                    self.lattice[res_iplus1["x"], res_iplus1["y"]] = 0
-                    # update the coordinates of the amino acid in the sequence object
-                    self.sequence.aa_coord_update(chain_index - 1, x_new1, y_new1)
-                    self.sequence.aa_coord_update(chain_index, x_new2, y_new2)
+            res_i,res_iminus1,res_iplus1,res_next2 = get_cks_aa_to_check(self, chain_index)
 
-            elif chain_index !=2 : # check for alternative U position
-                res_prev2 = self.sequence.aa_coord[chain_index - 3]
-                res_iminus1 = self.sequence.aa_coord[chain_index - 2]
-                res_i = self.sequence.aa_coord[chain_index - 1]
-                res_iplus1 = self.sequence.aa_coord[chain_index]
+            # check if 4 connected neighbors for a U & if the move is possible
+            is_u_valid, x_new1, y_new1, x_new2, y_new2 = validate_U(self, res_iminus1, res_i, res_iplus1, res_next2, chain_index)
 
-                if self._are_U(res_prev2, res_iminus1, res_i, res_iplus1):
-                    x_new1, y_new1, x_new2, y_new2 = self._find_potential_U(res_prev2, res_iminus1, res_i, res_iplus1)
-                    if self._check_occupancy(x_new1, y_new1) and self._check_occupancy(x_new2, y_new2):
-                        # move the amino acids to the new positions
-                        self.lattice[x_new1, y_new1] = chain_index - 1
-                        self.lattice[x_new2, y_new2] = chain_index
-                        # free the positions of the amino acids
-                        self.lattice[res_iminus1["x"], res_iminus1["y"]] = 0
-                        self.lattice[res_i["x"], res_i["y"]] = 0
-                        # update the coordinates of the amino acid in the sequence object
-                        self.sequence.aa_coord_update(chain_index - 2, x_new1, y_new1)
-                        self.sequence.aa_coord_update(chain_index - 1, x_new2, y_new2)
+            if is_u_valid:
+                execute_u_move(self, chain_index, res_i, res_iplus1, x_new1, y_new1, x_new2, y_new2)
 
+            # check for alternative cases
+            elif chain_index !=2 :
+                res_prev2, res_iminus1, res_i, res_iplus1 = get_alternative_positions(self, chain_index)
+                is_alt_u_valid, x_new1, y_new1, x_new2, y_new2 = validate_U(self, res_prev2, res_iminus1, res_i, res_iplus1, chain_index)
 
-
-
-    def _are_U(self, res1, res2, res3, res4):
-        cdt1 = abs(res1['x'] - res2['x']) + abs(res1['y'] - res2['y']) == 1
-        cdt2 = abs(res2['x'] - res3['x']) + abs(res2['y'] - res3['y']) == 1
-        cdt3 = abs(res3['x'] - res4['x']) + abs(res3['y'] - res4['y']) == 1
-        cdt4 = abs(res4['x'] - res1['x']) + abs(res4['y'] - res1['y']) == 1
-        return (cdt1 and cdt2 and cdt3 and cdt4)
-
-    def _find_potential_U(self, res1, res2, res3, res4):
-        x_new1 = res1['x'] - self._relative_position(res2, res1)[0]
-        y_new1 = res1['y'] - self._relative_position(res2, res1)[1]
-
-        x_new2 = res4['x'] - self._relative_position(res3, res4)[0]
-        y_new2 = res4['y'] - self._relative_position(res3, res4)[1]
-        
-        return x_new1, y_new1, x_new2, y_new2
-
-
-    def _relative_position(self, res1, res2):
-        # returns the relative position of res1 compared to res2
-        dx = res1['x'] - res2['x']
-        dy = res1['y'] - res2['y']
-        return dx, dy
+                if is_alt_u_valid:
+                    execute_alternative_u_move(self, chain_index, res_i, res_iminus1, x_new1, y_new1, x_new2, y_new2)
+        else:
+            raise ValueError("No CKS move possible. The amino acid is at the end of the chain")
 
 
     def pull_move(self, chain_index):
-        res_i = self.sequence.aa_coord[chain_index - 1] # equals to CHAIN INDEX
-        res_iplus1 = self.sequence.aa_coord[chain_index]
-        res_iminus1 = self.sequence.aa_coord[chain_index - 2] # equals to CHAIN INDEX -1
-        res_iminus2 = self.sequence.aa_coord[chain_index - 3] # equals to CHAIN INDEX -2
-        pos_L,found_L = self._find_L_positions(res_i, res_iplus1)
+        # Get the amino acids to check
+        res_iminus2, res_iminus1, res_i, res_iplus1 = get_pull_aa_to_check(self, chain_index)
+        # Find the potential positions of L
+        pos_L,found_L = find_L_positions(self, res_i, res_iplus1)
+
         if found_L:
-            pos_C, status_C, found_C = self._find_C_positions(pos_L, res_i, res_iminus1)
+            # If L is found, find the potential positions of C
+            pos_C, status_C, found_C = find_C_positions(self, pos_L, res_i, res_iminus1)
+
             if found_C is True:
                 if status_C == "C is res_iminus1":
                     # perform corner move
                     self.corner_move(chain_index)
                 elif status_C == "empty":
-                    # perform pull move
-                    # save positions of i and i-1
+                    # perform pull move & save positions of i and i-1
                     empty_pos = [(res_i["x"], res_i["y"]), (res_iminus1["x"], res_iminus1["y"])]
                     # move i and i+1 to L and C and free the prevous positions
-                    self._move(res_i, pos_L)
-                    self._move(res_iminus1, pos_C)
-
-                    self._free_position(res_i)
-                    self._free_position(res_iminus1)
-                    # update the coordinates of the amino acid in the sequence object
-                    self.sequence.aa_coord_update(chain_index - 1, pos_L[0], pos_L[1])
-                    self.sequence.aa_coord_update(chain_index - 2, pos_C[0], pos_C[1])
-
+                    execute_pull_move(self, chain_index, res_i, res_iminus1, pos_L, pos_C)
+                    # propagate pull moves
                     if res_i["chain_index"] >= 3:
                         loop_index = chain_index -1 #init index to i-1
+                        propagate_pull(self, loop_index, empty_pos)
 
-                        while loop_index >= 2 :
-                            res_loop_iminus_1 = self.sequence.aa_coord[loop_index-1] # get res i-1
-                            res_loop_iminus_2= self.sequence.aa_coord[loop_index-2] # get res i-2
-                            is_neighbor = self._are_topological_neighbors(res_loop_iminus_1, res_loop_iminus_2)
-                            if is_neighbor is False:
-                                temp_pos = (res_loop_iminus_2["x"], res_loop_iminus_2["y"])
-                                self._free_position(res_loop_iminus_2)
-                                new_position = empty_pos.pop(0)
-                                self._move(self.sequence.aa_coord[loop_index-2], new_position)
-                                self.sequence.aa_coord_update(loop_index-2, new_position[0], new_position[1])
-                                empty_pos.append(temp_pos)
-                            if is_neighbor is True:
-                                break
-                            loop_index -= 1
-
-    
-    def _move(self, res_to_be_moved, place_to_move):
-        self.lattice[place_to_move[0], place_to_move[1]] = res_to_be_moved["chain_index"]
-    
-    def _free_position(self, res_to_free):
-        self.lattice[res_to_free["x"], res_to_free["y"]] = 0
-
-
-    def _are_diagonal(self, res1, res2):
-        return (abs(res1['x'] - res2['x']) == 1 and abs(res1['y'] - res2['y']) == 1)
-
-    def _find_empty_diagonal(self, i, j):
-        possible_pos = []
-        if self.lattice[i-1,j-1] == 0:
-            possible_pos.append((i-1, j-1))
-        if self.lattice[i+1,j+1] == 0:
-            possible_pos.append((i+1, j+1))
-        if self.lattice[i-1,j+1] == 0:
-            possible_pos.append((i-1, j+1))
-        if self.lattice[i+1,j-1] == 0:
-            possible_pos.append((i+1, j-1))
-        return possible_pos
-    
-    def _find_L_positions(self, res_i, res_i1):
-        diag_pos = self._find_empty_diagonal(res_i["x"], res_i["y"])
-        neighbors_pos = self._find_empty_neighbors(res_i1["x"], res_i1["y"])
-        intersection = list(set(diag_pos) & set(neighbors_pos))
-        if len(intersection) > 0:
-            return intersection[0], True #on garde le premier pour l'instant
-        else:
-            
-            return (None,None), False 
-
-    def _find_C_positions(self, L, res_i, res_iminus1):
-        neighbors_pos_L = self._find_empty_neighbors(L[0], L[1])
-        neighbors_pos_i = self._find_empty_neighbors(res_i["x"], res_i["y"])
-        possible_pos = list(set(neighbors_pos_L) & set(neighbors_pos_i)) # find the common empty neighbors
-        if len(possible_pos) > 0:
-            return possible_pos[0], "empty", True # C is empty
-        elif self._are_topological_neighbors({"x":L[0],"y":L[1]}, res_iminus1): # check if C is occupied by res_iminus1
-            return [(res_iminus1["x"], res_iminus1["y"])], "C is res_iminus1", True
-        else:
-            return (None, None), "C is occupied", False
-
-    def _translate_chain(self, x, y):
-        # translate the lattice by x and y to recenter the conformation
-        self.lattice = np.roll(self.lattice, x, axis = 0)
-        self.lattice = np.roll(self.lattice, y, axis = 1)
-        # update the coordinates of the amino acids in the sequence object
-        for i in range(self.sequence.length):
-            self.sequence.aa_coord_update(i, self.sequence.aa_coord[i]["x"] + x, self.sequence.aa_coord[i]["y"] + y)
-
-
-    def _need_translation_x(self):
-        list_x = [temp_dict["x"] for temp_dict in self.sequence.aa_coord]
-        max_x = max(list_x)
-        min_x = min(list_x)
-        center = self.size // 2
-        middle = (min_x + max_x) // 2
-        dx = center - middle
-        if max_x >= self.size - 2 or min_x < 1:
-            return True, dx
-        else:
-            return False, 0
-
-    def _need_translation_y(self):
-        list_y = [temp_dict["y"] for temp_dict in self.sequence.aa_coord]
-        max_y = max(list_y)
-        min_y = min(list_y)
-        center = self.size // 2
-        middle = (min_y + max_y) // 2
-        dy = center - middle
-        if max_y >= self.size - 2 or min_y < 1:
-            return True, dy
-        else:
-            return False, 0
 
     def translation_check_and_apply(self):
-        check_x, dx = self._need_translation_x()
-        check_y, dy = self._need_translation_y()
+        check_x, dx = need_translation_x(self)
+        check_y, dy = need_translation_y(self)
         if check_x or check_y:
-            self._translate_chain(dx, dy)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-############## TO DEBUG ###########
-    def lattice_hp(self):
-        # Show the HP sequence on the lattice instead of the amino acid number
-        print(type(self.lattice))
-        self.lattice_hp = deepcopy(self.lattice)
-        print(self.lattice_hp)
-        self.lattice_hp.astype(str)
-        print(self.lattice_hp)
-        for i in range(self.size):
-            for j in range(self.size):
-                if self.lattice[i,j] != 0:
-                    print(self.lattice[i,j])
-                    self.lattice[i,j] = str(self.sequence.hp_sequence[self.lattice[i,j]-1])
-
-
-######## TO DO ########
-
-
-    def rmsd(self):
-        # calculate the root mean square deviation between the initial and final conformation
-        pass
-
-
-
-
-
-
-    def _check_connectivity(self, i, j):
-        # check if the amino acid is connected to the chain
-        return (abs(self.lattice[i,j] - self.lattice[i, j+1]) != 1)
-
-
-    def _check_hydrophobicity(self, i, j):
-        # check if the amino acid is hydrophobic
-        pass
-
-    # def _check_occupancy(self, i, j):
-    #     # returns boolean, check if the positions are occupied by an amino acids
-    #     return (self.lattice[i,j] != 0) and (self.lattice[i, j+1] != 0)
-   
-    #### TO KEEP OR NOT ? ####
-    def initialize_extended(self):
-        # place the HP sequence in the lattice with an extended conformation at the center of the lattice
-        start_pos_i = self.size // 2
-        start_pos_j = self.size // 2 - self.sequence.length // 2
-        for j in range(start_pos_j, start_pos_j + self.sequence.length):
-            self.lattice[start_pos_i,j] = self.lattice[start_pos_i,j-1] + 1
-
-
-    def _are_topological_neighbors(self, res1, res2):
-        # check if two amino acids are topological neighbors
-        return abs(res1['x'] - res2['x']) + abs(res1['y'] - res2['y']) == 1
-
-    def _are_not_connected_neighbors(self, res1, res2):
-        # check if two amino acids are connected neighbors
-        return abs(res1['index'] - res2['index']) > 1
-
-
-    
-
-    def _are_hydrophobic(self, res1, res2):
-        # check if two amino acids are hydrophobic
-        return res1['type'] == 'H' and res2['type'] == 'H'
-
-    
-
-
-    # # back up
-
-
-    # def _initialize_random(self):
-    # # place the HP sequence in the lattice with a random conformation
-    # start_pos_i = self.size // 2
-    # start_pos_j = self.size // 2
-    # i = start_pos_i
-    # j = start_pos_j
-    # self.lattice[i,j] = 1
-    # self.sequence.aa_coord_update(0, i, j) # update the coordinates of the amino acid in the sequence object
-    # for aa in range(1,self.sequence.length):
-    #     possible_pos = self._find_empty_neighbors(i, j)
-    #     if len(possible_pos) == 0:
-    #         raise ValueError("No possible position for the next amino acid, restart the initialization")
-    #         ### add a condition to restart the initialization, test with try and except!!
-    #     else:
-    #         pos = rd.choice(possible_pos)
-    #         i = pos[0]
-    #         j = pos[1]
-    #         self.lattice[i,j] = aa + 1 # code the amino acid nummber of the sequence in the lattice
-    #         # update position for the next amino acid
-    #         self.sequence.aa_coord_update(aa, i, j) # update the coordinates of the amino acid in the sequence object
-    #         i = pos[0]
-    #         j = pos[1]
+            translate_chain(self, dx, dy)

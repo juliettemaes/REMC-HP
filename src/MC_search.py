@@ -9,17 +9,24 @@ from variables import NB_ITER, TEMP, RHO
 
 class mc_search():
     
-    def __init__(self, lattice, temperature: int, probability: float, max_iteration: int):
+    def __init__(self, lattice, temperature: int, probability: float, max_iteration: int, target_energy: int = None):
         self.lattice = lattice
         self.trajectory = [lattice]
         self.temperature = temperature
         self.probability = probability
         self.max_iteration = max_iteration
         self.lattice.energy = self.lattice.calculate_energy()
+        self.target_energy = target_energy
         
 
     def run(self):
         for i in range(self.max_iteration): # add the energy condition
+
+            #print("Current energy : ",self.lattice.energy)
+            #print("Target energy : ",self.target_energy)
+            if self.target_energy is not None and self.lattice.energy == self.target_energy:
+                break
+
             # choose a random amino acid
             aa = rd.randint(1, self.lattice.sequence.length)
             # make a move
