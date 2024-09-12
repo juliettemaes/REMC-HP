@@ -3,6 +3,6 @@ copy
 math
 matplotlib
 networkx
-numpy=2.1.1
+numpy==2.1.1
 random
 argparse
