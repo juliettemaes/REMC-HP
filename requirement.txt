@@ -1,4 +1,5 @@
 # Required python libraries 
+argparse
 matplotlib
 networkx
 numpy==2.1.1

@@ -2,6 +2,7 @@
 import sequence as seq
 import argparse
 from variables import *
+from visualisation import *
 from REMC_search import *
 
 # Main program
@@ -20,4 +21,8 @@ if __name__ == "__main__":
     else:
         sequence = seq.Sequence(hp_sequence = args.hpsequence)
 
-    REMC_search(sequence, T_MIN, T_MAX, STEP, energy_optimal = args.optimal_energy, max_iteration = MAX_ITERATIONS, probability = PROBABILITY)
+    # Run the REMC search
+    result = REMC_search(sequence, T_MIN, T_MAX, STEP, energy_optimal = args.optimal_energy, max_iteration = MAX_ITERATIONS, probability = PROBABILITY)
+    print("FINAL ENERGY", result.energy)
+    # Visualize the conformation
+    visualize_lattice_graph(result)

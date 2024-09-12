@@ -64,11 +64,11 @@ This script takes two arguments, optimal_energy and hpsequence OR aasequence.
 Here is an example of a command line to run the project:  
 
 ```bash
-python src/run.py --hpsequence="HPHPPHHPHPPHPHHPPHPH" --optimal_energy=-9
+python src/main.py --hpsequence="HPHPPHHPHPPHPHHPPHPH" --optimal_energy=-9
 ```
 
 Here is an example of a INVALID command line :
 ```bash
-python src/run.py --hpsequence="HPHPPHHPHPPHPHHPPHPH" --aasequence="AMGHICVFGEDGLKILDGEA" --optimal_energy=-9
+python src/main.py --hpsequence="HPHPPHHPHPPHPHHPPHPH" --aasequence="AMGHICVFGEDGLKILDGEA" --optimal_energy=-9
 ```
 
