@@ -1,3 +1,7 @@
+"""
+General utility functions for handling movements in a lattice-based system.
+"""
+
 from typing import Dict, List, Tuple
 import numpy as np
 

@@ -1,4 +1,7 @@
-# Libraries
+"""
+Main script to perform REMC search and visualize the results.
+"""
+
 import sequence as seq
 import argparse
 from variables import *
@@ -8,6 +11,7 @@ from REMC_search import *
 # Main program
 if __name__ == "__main__":
 
+    # Parse the arguments
     parser = argparse.ArgumentParser(description='REMC search')
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument('--hpsequence', type = str, help = 'HP sequence')
@@ -16,6 +20,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     
+    # Create the sequence object
     if args.aasequence:
         sequence = seq.Sequence(sequence = args.aasequence)
     else:
