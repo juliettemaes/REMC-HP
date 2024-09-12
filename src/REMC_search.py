@@ -1,12 +1,9 @@
-# Libraries
 from copy import deepcopy
 import math
 import numpy as np
 import random as rd
 import lattice as lat
 import MC_search as mc
-import sequence as seq
-from variables import *
 
 def temp_range(start, end, nb_replicat):
     step = (end - start) // nb_replicat
@@ -46,8 +43,6 @@ def evaluate_exchange(delta):
         probability = rd.random()
         return probability > math.exp(-delta)
 
-
-
 def REMC_search(sequence, Tmin, Tmax, nb_replica, energy_optimal, max_iteration = 500, probability = 0.5):
     temperatures = temp_range(Tmin, Tmax, nb_replica)
     energy_best = 0
@@ -80,27 +75,3 @@ def REMC_search(sequence, Tmin, Tmax, nb_replica, energy_optimal, max_iteration 
         if replicate.lattice.energy == energy_best:
             print("energy best", energy_best, "is associated with lattice", i)
             return replicate.lattice
-
-    
-
-
-
-
-
-        
-
-# Main program
-if __name__ == "__main__":
-
-    sequence1 = seq.Sequence(hp_sequence = SI_1)
-    print(sequence1.hp_sequence)
-    print(REMC_search(sequence1, 160, 220, 10, energy_optimal = -9, max_iteration = 20000, probability = 0.5))
-    print(sequence1.hp_sequence)
-    # print(lat.sequence.hp_sequence)
-    # lat = lat.Lattice(sequence = sequence1)
-    # energy_initial = lat.calculate_energy()
-    # #mc_search = mc.mc_search(lattice = lat, temperature = 160, probability = 0.5, max_iteration = 100000, target_energy = -9)
-    # mc_search.run()
-    # print("INITIAL ENERGY", energy_initial)
-    # print("ENERGY LAST LATTICE", lat.energy)
-    # print("FINAL ENERGY", mc_search.lattice.energy)

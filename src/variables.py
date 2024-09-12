@@ -40,7 +40,9 @@ NB_ITER = 500
 TEMP = 160  # to adjust
 RHO = 0.5
 
-
 # Replicat exchange Monte Carlo search variables
 T_MIN = 160
 T_MAX = 220
+STEP = 10
+MAX_ITERATIONS = 20000
+PROBABILITY = 0.5
