@@ -1,4 +1,4 @@
-# A replica exchange Monte Carlo algorithm for protein folding in the HP model
+# A replica exchange Monte Carlo algorithm for protein folding in the Hydrophobic-Polar (HP) model
 
 Juliette Maes
 Sept. 2024
